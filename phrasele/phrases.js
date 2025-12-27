@@ -1,0 +1,7 @@
+const PHRASES = [
+  "HOW WE MET",
+  "OUR FIRST DATE",
+  "I LOVE YOU",
+  "MY FOREVER PERSON",
+  "WILL YOU MARRY ME"
+];
