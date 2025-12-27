@@ -6,6 +6,7 @@ const MAX_GUESSES = 6;
 // ====== State ======
 let phraseIndex = 0;
 let solution = "";
+let currentHint = ""; 
 let normalised = "";
 let cols = 0;
 
@@ -14,7 +15,9 @@ let cursorCol = 0;          // position in the phrase (includes spaces)
 let rowInput = [];          // array length cols, stores letters or "" (spaces ignored)
 let gameOver = false;
 let hintsUsed = 0;
-const MAX_HINTS = 2; // change this if you want
+let history = []; // array of strings, one per submitted guess row
+
+const MAX_HINTS = 6; // change this if you want
 
 
 // Keyboard colour priority: correct > present > absent
@@ -37,27 +40,23 @@ const hintInfo = document.getElementById("hintInfo");
 function saveGame() {
   try {
     const data = {
-      // phrase identity
       phraseIndex,
-      currentPhrase,  // optional but helpful
-      // gameplay state
-      guesses,
-      rowIndex,
-      currentGuess,
+      solution,
+      currentHint,
+      normalised,
+      cols,
+      currentRow,
+      cursorCol,
+      rowInput,
       gameOver,
-      won,
-      // hint state
       hintsUsed,
-      // shuffle bag state (so Random continues fairly)
       phraseBag,
       bagPos,
-      // keyboard state if you track it
-      keyState // only if you already have this object
+      history,
+      keyState
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    // ignore storage errors silently
-  }
+  } catch (e) {}
 }
 
 function loadGame() {
@@ -67,43 +66,87 @@ function loadGame() {
 
     const data = JSON.parse(raw);
 
-    // restore state
-    phraseIndex = data.phraseIndex ?? phraseIndex;
-    currentPhrase = data.currentPhrase ?? currentPhrase;
+    // --- phrase ---
+    phraseIndex = Number.isInteger(data.phraseIndex) ? data.phraseIndex : phraseIndex;
 
-    guesses = Array.isArray(data.guesses) ? data.guesses : [];
-    rowIndex = Number.isInteger(data.rowIndex) ? data.rowIndex : 0;
-    currentGuess = Array.isArray(data.currentGuess) ? data.currentGuess : [];
+    // reload phrase to rebuild correct length & reset board structure
+    loadPhrase(phraseIndex);
 
-    gameOver = !!data.gameOver;
-    won = !!data.won;
+    // --- gameplay ---
+    currentRow = Number.isInteger(data.currentRow) ? data.currentRow : 0;
+    cursorCol  = Number.isInteger(data.cursorCol) ? data.cursorCol : cursorCol;
 
-    hintsUsed = Number.isInteger(data.hintsUsed) ? data.hintsUsed : 0;
-
-    phraseBag = Array.isArray(data.phraseBag) ? data.phraseBag : phraseBag;
-    bagPos = Number.isInteger(data.bagPos) ? data.bagPos : bagPos;
-
-    if (data.keyState && typeof data.keyState === "object") {
-      keyState = data.keyState;
+    rowInput = Array.isArray(data.rowInput) ? data.rowInput : rowInput;
+    if (!Array.isArray(rowInput) || rowInput.length !== cols) {
+      rowInput = new Array(cols).fill("");
     }
 
-    // rebuild UI
-    loadPhrase(phraseIndex); // ensures phrase length etc is consistent
+    gameOver  = !!data.gameOver;
+    hintsUsed = Number.isInteger(data.hintsUsed) ? data.hintsUsed : 0;
+
+    // force cursor onto a real tile (skip spaces)
+    cursorCol = moveCursorForwardFrom(cursorCol);
+
+    // --- bag ---
+    phraseBag = Array.isArray(data.phraseBag) ? data.phraseBag : phraseBag;
+    bagPos    = Number.isInteger(data.bagPos) ? data.bagPos : bagPos;
+
+    // --- keyboard colours ---
+    if (data.keyState && typeof data.keyState === "object") {
+      for (const k in keyState) delete keyState[k];
+      Object.assign(keyState, data.keyState);
+    }
+
+    // --- rebuild UI ---
     renderBoard();
     buildKeyboard();
     setSubtitle();
     updateHintUI();
 
-    if (gameOver) {
-      setMessage(won ? "Loaded: you already won 🎉" : "Loaded: game over.");
-    } else {
-      setMessage("Loaded saved game — carry on.");
+    // --- restore submitted rows (history) ---
+    history = Array.isArray(data.history) ? data.history : [];
+
+    for (let r = 0; r < Math.min(history.length, MAX_GUESSES); r++) {
+      const guess = history[r];
+      if (!guess) continue;
+
+      // fill tiles
+      for (let c = 0; c < cols; c++) {
+        if (isSpace(c)) continue;
+        const tile = tileAt(r, c);
+        if (tile) tile.textContent = guess[c] || "";
+      }
+
+      // re-score + re-paint + re-keyboard
+      const score = scoreGuess(guess, normalised);
+      paintRow(r, score);
+      lockRow(r);
+      updateKeyboardFromGuess(guess, score);
     }
 
+    // --- restore current in-progress row from rowInput ---
+    for (let c = 0; c < cols; c++) {
+      if (isSpace(c)) continue;
+      const tile = tileAt(currentRow, c);
+      if (tile) tile.textContent = rowInput[c] || "";
+    }
+
+    setMessage(gameOver ? "Loaded: game finished." : "Loaded saved game — carry on.");
     return true;
   } catch (e) {
     return false;
   }
+}
+
+
+
+function showHint() {
+  if (!currentHint) {
+    setMessage("No hint available for this phrase.");
+    return;
+  }
+
+  setMessage(`Hint: ${currentHint}`);
 }
 
 function clearSave() {
@@ -113,59 +156,51 @@ function clearSave() {
 // ====== Hints ======
 function updateHintUI() {
   if (!hintInfo) return;
-  hintInfo.textContent = `Hints: ${Math.max(0, MAX_HINTS - hintsUsed)}/${MAX_HINTS}`;
+  hintInfo.textContent = `Hints: ${Math.max(0, MAX_HINTS - hintsUsed)}/${MAX_HINTS}`; // 
   if (hintBtn) hintBtn.disabled = hintsUsed >= MAX_HINTS || gameOver;
 }
 
 function giveHint() {
   if (gameOver) return;
+
   if (hintsUsed >= MAX_HINTS) {
     setMessage("No hints left.");
     return;
   }
 
-  const target = currentPhrase.toLowerCase();
-  // Find letters we still haven't revealed anywhere in correct position
-  // We’ll treat “revealed” as: already correctly placed in any previous submitted row.
-  const revealed = new Set();
-
-  for (let r = 0; r < guesses.length; r++) {
-    const g = guesses[r];
-    for (let i = 0; i < g.length; i++) {
-      if (g[i] && target[i] && g[i] === target[i]) revealed.add(i);
-    }
-  }
-
-  // Candidate positions: a-z only, not space/punct, not already revealed
-  const candidates = [];
-  for (let i = 0; i < target.length; i++) {
-    const ch = target[i];
-    if (ch >= "a" && ch <= "z" && !revealed.has(i)) candidates.push(i);
-  }
-
-  if (candidates.length === 0) {
-    setMessage("Nothing left to hint!");
+  const target = (normalised || "").toUpperCase();
+  if (!target) {
+    setMessage("No phrase loaded.");
     return;
   }
 
-  // Pick a random unrevealed position
-  const pos = candidates[Math.floor(Math.random() * candidates.length)];
-  const letter = target[pos].toUpperCase();
-
-  // Put this letter into the current row at the correct position
-  // Ensure currentGuess is the right length (same as phrase)
-  if (!currentGuess || currentGuess.length !== target.length) {
-    currentGuess = Array(target.length).fill("");
+  // pick a letter position not yet filled in current row
+  const candidates = [];
+  for (let i = 0; i < cols; i++) {
+    const ch = target[i];
+    const isLetter = ch >= "A" && ch <= "Z";
+    if (isLetter && rowInput[i] === "") candidates.push(i);
   }
 
-  currentGuess[pos] = letter;
+  if (candidates.length === 0) {
+    setMessage("Nothing left to hint on this row!");
+    return;
+  }
+
+  const pos = candidates[Math.floor(Math.random() * candidates.length)];
+  const letter = target[pos];
+
+  rowInput[pos] = letter;
+
+  const tile = tileAt(currentRow, pos);
+  if (tile) tile.textContent = letter;
 
   hintsUsed++;
-  renderCurrentRow();   // you should already have something like this; if not, see note below
   updateHintUI();
-  setMessage(`Hint used: revealed letter at position ${pos + 1}.`);
+  setMessage("Hint used: revealed a letter.");
   saveGame();
 }
+
 
 
 // ====== Helpers ======
@@ -186,14 +221,33 @@ function loadPhrase(index) {
   }
 
   phraseIndex = Math.max(0, Math.min(index, PHRASES.length - 1));
-  solution = String(PHRASES[phraseIndex] ?? "").toUpperCase();
+
+  const phraseItem = PHRASES[phraseIndex];
+
+// Allow either: string OR { text, hint }
+ if (typeof phraseItem === "string") {
+  solution = phraseItem.toUpperCase();
+  currentHint = "";
+ } else if (phraseItem && typeof phraseItem.text === "string") {
+  solution = phraseItem.text.toUpperCase();
+  currentHint = phraseItem.hint || ""; 
+ } else {
+  setMessage("Invalid phrase format.");
+  return null;
+  } 
+
+  currentHint = String(currentHint).trim();
   normalised = solution;
   cols = normalised.length;
 
   currentRow = 0;
   cursorCol = 0;
+  hintsUsed = 0;
   rowInput = new Array(cols).fill("");
   gameOver = false;
+  updateHintUI();
+
+
 
   // reset keyboard states
   for (const k in keyState) delete keyState[k];
@@ -505,6 +559,9 @@ function submitRow() {
     gameOver = true;
     return;
   }
+  history[currentRow] = guess;
+ saveGame();
+
 
   setMessage(`Try again (${MAX_GUESSES - currentRow} guesses left)`);
   resetRowInput();
@@ -542,6 +599,7 @@ function init() {
   if (!loaded) {
   randomPhrase(); 
   }
+
   updateHintUI();
   function restartSamePhrase() {
   loadPhrase(phraseIndex);
