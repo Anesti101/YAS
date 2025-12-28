@@ -633,6 +633,11 @@ function submitRow() {
 function handleKey(e) {
   if (gameOver) return;
 
+  // Skip if mobile input is focused — let the input event handler process instead
+  if (mobileInput && document.activeElement === mobileInput) {
+    return;
+  }
+
   const key = e.key;
 
   if (key === "Backspace") {
