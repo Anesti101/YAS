@@ -22,6 +22,11 @@ body {
   border-bottom: 1px solid #333;
 }
 
+.toolbar h1 {
+  margin: 0;
+  font-size: clamp(1.2rem, 5vw, 2rem);
+}
+
 #game {
   margin-top: 12px;
   display: grid;
@@ -224,6 +229,24 @@ body {
   body { padding: 8px; }
   .tile { --tile-min: 40px; }
   .key { min-width: 30px; height: 40px; }
+}
+
+/* Mobile phones: hide on-screen keyboard and reduce title size */
+@media (max-width: 768px) and (hover: none) and (pointer: coarse) {
+  .keyboard {
+    display: none;
+  }
+  
+  .topbar {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .controls {
+    justify-content: center;
+    width: 100%;
+  }
 }
 
 /* Mobile helper input: invisible but focusable so native keyboards appear when needed */
