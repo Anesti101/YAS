@@ -1,50 +1,70 @@
+* { box-sizing: border-box; }
+html, body { height: 100%; }
 body {
   margin: 0;
+  overflow-x: hidden;
   background: #121213;
   color: white;
-  font-family: system-ui, sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  padding: 12px; /* small page padding to avoid edge clipping on phones */
 }
 
 .toolbar {
   width: 100%;
-  padding: 16px;
+  padding: 12px 8px;
   text-align: center;
   border-bottom: 1px solid #333;
 }
 
 #game {
-  margin-top: 24px;
+  margin-top: 18px;
   display: grid;
-  gap: 16px;
+  gap: 14px;
   justify-items: center;
+  width: 100%;
 }
 
 #board {
   display: grid;
   gap: 6px;
+  width: 100%;
+  justify-content: center;
 }
 
 .tile {
-  width: 58px;
-  height: 58px;
+  --tile-min: 44px;
+  --tile-max: 72px;
+  --tile-vw: 12vw;
+  --tile-size: clamp(var(--tile-min), var(--tile-vw), var(--tile-max));
+
+  width: var(--tile-size);
+  height: var(--tile-size);
+  aspect-ratio: 1/1;
   border: 2px solid #3a3a3c;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: clamp(1rem, 4.5vw, 1.6rem);
   font-weight: bold;
+  border-radius: 6px;
+  line-height: 1;
 }
 
 .row {
-  display: grid;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: nowrap;
 }
 
 .gap {
-  width: 58px;
-  height: 58px;
+  width: var(--tile-size);
+  height: var(--tile-size);
 }
 
 .tile.correct { background: #22c55e; border-color: #22c55e; color: #0b1220; }
@@ -55,21 +75,26 @@ body {
 
 /* ===== On-screen keyboard ===== */
 .keyboard {
-  margin-top: 18px;
-  display: grid;
-  gap: 10px;
-  justify-content: center;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  align-items: center;
+  padding: 0 6px;
 }
 
 .kb-row {
   display: flex;
   gap: 8px;
   justify-content: center;
+  flex-wrap: wrap; /* allow keys to wrap on narrow screens */
 }
 
 .key {
-  min-width: 42px;
-  height: 48px;
+  min-width: clamp(34px, 9vw, 58px);
+  height: clamp(40px, 8vw, 56px);
   border-radius: 10px;
   border: 2px solid #263047;
   background: #121a2b;
@@ -78,9 +103,13 @@ body {
   letter-spacing: 0.02em;
   cursor: pointer;
   user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
 }
 
-.key.wide { min-width: 72px; }
+.key.wide { min-width: clamp(64px, 20vw, 100px); }
 
 .key:active { transform: translateY(1px); }
 
@@ -94,8 +123,9 @@ body {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 12px;
+  width: 100%;
 }
 
 .subtitle {
@@ -134,3 +164,41 @@ body {
   opacity: 0.85;
 }
 
+#app {
+  width: 100%;
+  max-width: 420px; /* keep comfortable reading width on phones and tablets */
+  margin: 0 auto;
+  padding: 1rem;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+  gap: 6px;
+}
+
+/* Desktop / larger screens: restore original fixed-like sizes */
+@media (min-width: 700px) {
+  :root {
+    --tile-min: 58px;
+    --tile-max: 58px;
+    --tile-vw: 58px;
+  }
+
+  .tile {
+    font-size: 28px;
+  }
+
+  .key {
+    min-width: 42px;
+    height: 48px;
+  }
+
+  .key.wide { min-width: 72px; }
+}
+
+/* Extra small phones adjustments */
+@media (max-width: 360px) {
+  body { padding: 8px; }
+  .tile { --tile-min: 40px; }
+  .key { min-width: 30px; height: 40px; }
+}
