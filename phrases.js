@@ -1,9 +1,9 @@
 const PHRASES = [
-  { text: "FINAL", hint: "Where it all started" },
-  { text: "NIGHT", hint: "That night" },
- { text: "Three", hint: "Three words" },
-  { text: "Who", hint: "Who you are to me" },
-  { text: "all", hint: "One final question 💍" }
+  { text: "Focus", hint: "Where it all started" },
+  { text: "Might", hint: "That night" },
+ { text: "Virus", hint: "Three words" },
+  { text: "Yield", hint: "Who you are to me" },
+  { text: "Importance", hint: "One final question 💍" }
 ];
 
 
