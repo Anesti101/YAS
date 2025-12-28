@@ -28,15 +28,14 @@
   </div>
 </div>
 
-<div id="board" class="board"></div>
-<div id="keyboard" class="keyboard" aria-label="On-screen keyboard"></div>
-<div class="message" id="message"></div>
-
   <main id="game">
     <div id="board" class="board"></div>
     <div id="keyboard" class="keyboard" aria-label="On-screen keyboard"></div>
-    <p id="message" class="message"></p>
+    <p id="message" class="message" id="message"></p>
   </main>
+
+  <!-- Hidden-but-focusable input for mobile keyboards. Focus this to open native keyboard. -->
+  <input id="mobileInput" class="mobile-input" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-hidden="true" />
 
   <script src="phrases.js"></script>
   <script src="game.js"></script>

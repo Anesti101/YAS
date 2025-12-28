@@ -28,6 +28,7 @@ const STORAGE_KEY = "phrasele_save_v1";
 const boardEl = document.getElementById("board");
 const messageEl = document.getElementById("message");
 const keyboardEl = document.getElementById("keyboard");
+const mobileInput = document.getElementById("mobileInput");
 
 const restartBtn = document.getElementById("restartBtn");
 const nextBtn = document.getElementById("nextBtn");
@@ -147,6 +148,67 @@ function showHint() {
   }
 
   setMessage(`Hint: ${currentHint}`);
+}
+
+// ====== Mobile input wiring ======
+function setupMobileInput() {
+  if (!mobileInput) return;
+
+  // When text is typed into the invisible input, consume the last character
+  // and send it to the existing `putLetter` function. Clear field after each char.
+  let prev = "";
+
+  mobileInput.addEventListener("input", (e) => {
+    const v = mobileInput.value || "";
+    if (v.length === 0) { prev = ""; return; }
+
+    // take only the new characters typed (users may paste; process sequentially)
+    const delta = v.slice(prev.length);
+    for (const ch of delta) {
+      const up = ch.toUpperCase();
+      if (/^[A-Z]$/.test(up)) {
+        putLetter(up);
+      } else if (ch === "\n") {
+        submitRow();
+      }
+    }
+
+    // reset the input so each keystroke is handled individually
+    mobileInput.value = "";
+    prev = "";
+  });
+
+  // handle physical/backspace/enter keys from mobile keyboard
+  mobileInput.addEventListener("keydown", (e) => {
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      backspace();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      submitRow();
+    }
+  });
+
+  // Focus helper: focus the input on tap inside the board/keyboard area to open keyboard
+  const focusMobile = () => {
+    try { mobileInput.focus(); } catch (e) {}
+  };
+
+  boardEl.addEventListener("touchstart", focusMobile, { passive: true });
+  keyboardEl.addEventListener("touchstart", focusMobile, { passive: true });
+
+  // Focus-once helper: focus the input after the first user tap to open mobile keyboard.
+  // This avoids auto-focusing on page load which can be intrusive.
+  const onceFocus = () => {
+    try { mobileInput.focus(); } catch (e) {}
+    // remove the touch handlers so focus only happens once after an intentional tap
+    try { boardEl.removeEventListener('touchstart', onceFocus); } catch (e) {}
+    try { keyboardEl.removeEventListener('touchstart', onceFocus); } catch (e) {}
+  };
+
+  // attach the once-focus handler (replaces previous focusMobile usage)
+  boardEl.addEventListener("touchstart", onceFocus, { passive: true });
+  keyboardEl.addEventListener("touchstart", onceFocus, { passive: true });
 }
 
 function clearSave() {
@@ -626,6 +688,8 @@ function nextPhrase() {
   buildKeyboard();
   resetRowInput();
   setSubtitle();
+  // wire mobile input after DOM built
+  setupMobileInput();
   if (restartBtn) restartBtn.addEventListener("click", restartSamePhrase);
   if (nextBtn) nextBtn.addEventListener("click", nextPhrase);
   if (randomBtn) randomBtn.addEventListener("click", randomPhrase);

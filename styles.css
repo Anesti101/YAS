@@ -1,5 +1,6 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+/* Use the viewport height unit to make the app fill the screen on mobile (100dvh) */
 body {
   margin: 0;
   overflow-x: hidden;
@@ -22,18 +23,25 @@ body {
 }
 
 #game {
-  margin-top: 18px;
+  margin-top: 12px;
   display: grid;
-  gap: 14px;
+  gap: 12px; 
   justify-items: center;
   width: 100%;
+  /* Make the main area fill available viewport height so board + keyboard fit */
+  min-height: calc(100dvh - 96px);
+  max-height: calc(100dvh - 48px);
+  box-sizing: border-box;
+  align-content: start;
 }
 
 #board {
   display: grid;
-  gap: 6px;
+  gap: 24px;
   width: 100%;
   justify-content: center;
+  overflow: auto; /* allow scrolling if board exceeds available space */
+  -webkit-overflow-scrolling: touch;
 }
 
 .tile {
@@ -56,8 +64,10 @@ body {
 }
 
 .row {
-  display: flex;
-  gap: 6px;
+  /* Force rows to layout with flex so they respect responsive tile sizing.
+     Render code sets inline display:grid; use !important to ensure flex layout. */
+  display: flex !important;
+  gap: 14px;
   justify-content: center;
   flex-wrap: nowrap;
 }
@@ -65,6 +75,18 @@ body {
 .gap {
   width: var(--tile-size);
   height: var(--tile-size);
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+}
+
+/* Override inline sizing JS may set (58px) so responsive sizing always wins */
+.row .tile {
+  width: var(--tile-size) !important;
+  height: var(--tile-size) !important;
+}
+.row .gap {
+  width: var(--tile-size) !important;
+  height: var(--tile-size) !important;
 }
 
 .tile.correct { background: #22c55e; border-color: #22c55e; color: #0b1220; }
@@ -74,6 +96,7 @@ body {
 .tile.locked { opacity: 0.98; }
 
 /* ===== On-screen keyboard ===== */
+/* On-screen keyboard */
 .keyboard {
   margin-top: 12px;
   display: flex;
@@ -202,3 +225,21 @@ body {
   .tile { --tile-min: 40px; }
   .key { min-width: 30px; height: 40px; }
 }
+
+/* Mobile helper input: invisible but focusable so native keyboards appear when needed */
+.mobile-input {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  width: 36px;
+  height: 44px;
+  opacity: 0.01; /* nearly invisible but still focusable */
+  background: transparent;
+  color: transparent;
+  border: none;
+  z-index: 9999;
+  caret-color: transparent;
+}
+
+/* Prevent horizontal scrolling globally */
+html, body { overflow-x: hidden; }
