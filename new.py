@@ -1,10 +1,13 @@
 
-import sys
+#  counts the input numbers together 
+def countt(nums):
+    total = 0 
 
-filename = sys.argv[1]
+    for i in nums:
+        
+         total += int(i)
 
-with open(filename) as f:
-    lines = f.readlines().strip()
+    print(total)
 
-    for i in lines:
-        return sum(i)
+numbers =(3,3)
+countt(numbers)
