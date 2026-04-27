@@ -1,5 +1,4 @@
 
-#  counts the input numbers together 
 def countt(nums):
     total = 0 
 
@@ -9,5 +8,5 @@ def countt(nums):
 
     print(total)
 
-numbers =(3,3)
-countt(numbers)
+word =(3,3)
+countt(word)
