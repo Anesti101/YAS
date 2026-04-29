@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phrasele</title>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="toolbar">
+    <h1>PHRASELE</h1>
+  </header>
+
+  <div class="topbar">
+  <div class="title">
+    <h1>Phrasele</h1>
+    <p id="subtitle" class="subtitle"></p>
+  </div>
+
+  <div class="controls">
+    <button id="restartBtn" class="btn">Restart</button>
+    <button id="nextBtn" class="btn btn-primary">Next phrase</button>
+    <button id="randomBtn" class="btn">Random</button>
+    <button id="hintBtn" class="btn">Hint</button>
+    <span id="hintInfo" class="hint-info"></span> 
+  </div>
+</div>
+
+  <main id="game">
+    <div id="board" class="board"></div>
+    <div id="keyboard" class="keyboard" aria-label="On-screen keyboard"></div>
+    <p id="message" class="message" id="message"></p>
+  </main>
+
+  <!-- Hidden-but-focusable input for mobile keyboards. Focus this to open native keyboard. -->
+  <input id="mobileInput" class="mobile-input" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-hidden="true" />
+
+  <script src="phrases.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
